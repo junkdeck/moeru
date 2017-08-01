@@ -269,8 +269,11 @@ function love.load(arg)
   bgm = love.audio.newSource('assets/sfx/bgm.ogg', 'stream')
   bgmTitle = love.audio.newSource('assets/sfx/bgm_title.ogg', 'stream')
   bgm:setLooping(true)
+  bgm:play()
+  bgm:setVolume(0)
   bgmTitle:setLooping(true)
   bgmTitle:play()
+
 
   -- low hp warning sound
   warningSound = love.audio.newSource("assets/sfx/warning.wav", "static")
@@ -322,7 +325,7 @@ function love.update(dt)
     if love.keyboard.isDown(control.restart) then
       gameRunning = true
       bgmTitle:stop()
-      bgm:play()
+      bgm:setVolume(1)
 
       -- start position, middle of screen at bottom
       player.pos.x = START_POS.x; player.pos.y = START_POS.y - 8
@@ -639,7 +642,9 @@ function love.update(dt)
       player.pwr = player.pwr + 1
       pickedUpPower = false
     elseif pickedUpPower == "repair" then
-      player.hp = player.hp + 1
+      if player.hp < player.maxhp then
+        player.hp = player.hp + 1
+      end
       pickedUpPower = false
     end
 
