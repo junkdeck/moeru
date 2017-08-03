@@ -241,6 +241,9 @@ shakeTimer, shakeDuration, shakeMagnitude, shakeMod= 0, -1, 0, 1
 gameRunning = false
 
 function love.load(arg)
+  if not love.filesystem.exists("highscore.sav") then
+    love.filesystem.write("highscore.sav", 0)
+  end
   savedHighScore = love.filesystem.read("highscore.sav")
   currentHighScore = tonumber(savedHighScore)
 
