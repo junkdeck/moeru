@@ -25,6 +25,13 @@ function updatePlayerGunCoords(left, right)
   playerGunCoords.right.y = right.y
 end
 
+function addToScore(toAdd)
+  totalScore = totalScore + toAdd
+  if totalScore > currentHighScore then
+    currentHighScore = totalScore
+  end
+end
+
 function shakeScreen(duration,magnitude)
   shakeTimer, shakeDuration, shakeMagnitude = 0, duration or 1, magnitude or 5
   shakeMod = 1
@@ -68,7 +75,7 @@ function addDrop()
   local dx = love.math.random(16,love.graphics.getWidth()/(1*SCALE_FACTOR)-32)
   newDrop = {pos = {x = dx, y = 0}, type = nil, img = nil, rot_time = 0, rot_speed = love.math.random(1.0,2.0), rot_dir = love.math.random(-1,1)}
 
-  if rot_dir == 0 then rot_dir = 1 end
+  if newDrop.rot_dir == 0 then newDrop.rot_dir = 1 end
   local dropChance = love.math.random(1,100)
 
   if love.math.random(1,100) >= 50 then   -- 50% chance for drops to occur
@@ -543,10 +550,7 @@ function love.load(arg)
 
         -- enemy death
         if enemy.hp <= 0 then
-          totalScore = totalScore + 10
-          if totalScore > currentHighScore then
-            currentHighScore = totalScore
-          end
+          addToScore(10)
 
           -- blow him up
           shakeScreen(0.35,4)
@@ -692,8 +696,8 @@ function love.load(arg)
         if checkCollision(drop.pos.x-16, drop.pos.y-16, 32, 32, player.pos.x - 4, player.pos.y - 4, 8, 8) and player.alive then
           oldPow = gunPower
           pickedUpPower = drop.type
-
-          totalScore = totalScore + 5
+          addToScore(5)
+          -- totalScore = totalScore + 5
           local powSound = getRandSound(powerups[0],powerups)
           powerups[powSound]:play()
           powerups[0] = powSound
