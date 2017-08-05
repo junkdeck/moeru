@@ -146,7 +146,7 @@ SCALE_FACTOR = love.graphics.getHeight() / 320
 
 -- constants
 -- SCALE_FACTOR = 3
-DEBUG = false
+DEBUG = true
 AIR_RESIST = 20
 TERM_VEL = 200
 GRAV = 10
@@ -187,6 +187,7 @@ playerdeath = {}
 playerhurt = {}
 hurt = {}
 powerups = {}
+bombexplode = {}
 startsounds = {}
 
 -- image storage
@@ -205,6 +206,7 @@ flashImg = nil
 muzzleImg = nil
 bumblerImg = nil
 girderImg = nil
+bombImg = nil
 
 titleKanjiImg = nil
 titleBurnImg = nil
@@ -268,6 +270,7 @@ function love.load(arg)
   flashImg = love.graphics.newImage('assets/rapidflash_sheet.png')
   muzzleImg = love.graphics.newImage('assets/muzzle_sheet.png')
   girderImg = love.graphics.newImage('assets/girders.png')
+  bombImg = love.graphics.newImage('assets/bomb.png')
 
   titleKanjiImg = love.graphics.newImage('assets/moeru_kanji.png')
   titleBurnImg = love.graphics.newImage('assets/moeru_burn.png')
@@ -336,6 +339,10 @@ function love.load(arg)
     explosions[3] = love.audio.newSource("assets/sfx/explod3.wav", "static")
     explosions[4] = love.audio.newSource("assets/sfx/explod4.wav", "static")
     explosions[5] = love.audio.newSource("assets/sfx/explod5.wav", "static")
+    -- bomb explosion sounds
+    bombexplode[1] = love.audio.newSource("assets/sfx/screenbomb1.wav","static")
+    bombexplode[2] = love.audio.newSource("assets/sfx/screenbomb2.wav","static")
+    bombexplode[3] = love.audio.newSource("assets/sfx/screenbomb3.wav","static")
     -- load player explosions
     playerdeath[1] = love.audio.newSource("assets/sfx/playerdeath1.wav", "static")
     playerdeath[2] = love.audio.newSource("assets/sfx/playerdeath1.wav", "static")
@@ -403,8 +410,24 @@ function love.load(arg)
       end
 
       if DEBUG then
-        if love.keyboard.isDown('l') then
+        if love.keyboard.isDown('m') then
           addDrop()
+        end
+
+        -- SCREEN CLEARING BOMBS
+        if love.keyboard.isDown('l') then
+          local bombSound = getRandSound(bombexplode[0], bombexplode)
+          bombexplode[bombSound]:stop()
+          bombexplode[bombSound]:play()
+          bombexplode[0] = bombSound
+          for i, enemy in ipairs(enemies) do
+            enemy.hp = 0
+          end
+          for i, bullet in ipairs(enemy_bullets) do
+            addFx(bullet.pos.x, bullet.pos.y, "dangerpuff")
+            addToScore(1)
+            table.remove(enemy_bullets,i)
+          end
         end
       end
 
@@ -952,7 +975,7 @@ function love.load(arg)
 
       local title = "- press j to start -"
       love.graphics.print(title, love.graphics.getWidth()/(2*SCALE_FACTOR), love.graphics.getHeight()/(2*SCALE_FACTOR)+48 + (2 * math.sin(4*globalTime)), r, sx, sy, upheavalFont:getWidth(title)/2, upheavalFont:getHeight(title)/2)
-      local instruct = {"wasd - moves","k - shoots"}
+      local instruct = {"wasd - moves","k - shoots", "l - bomb"}
       for i=1,#instruct do
         love.graphics.print(instruct[i], love.graphics.getWidth()/(2*SCALE_FACTOR), love.graphics.getHeight()/(2*SCALE_FACTOR)+56+(16*i),r, 1 + 0.025 * math.sin(math.random(1,4)*globalTime), sy, upheavalFont:getWidth(instruct[i])/2, upheavalFont:getHeight(instruct[i])/2)
       end
