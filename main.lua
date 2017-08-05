@@ -187,6 +187,7 @@ playerdeath = {}
 playerhurt = {}
 hurt = {}
 powerups = {}
+startsounds = {}
 
 -- image storage
 bulletOrangeImg = nil
@@ -228,7 +229,6 @@ playerWhichGun = 0  -- keeps track of which gun to draw bullets from
 totalScore = 0
 playerShotSound = nil
 pickedUpPower = false
-playerJustDied = false
 canPlayWarning = true
 
 -- gun power vars
@@ -324,9 +324,12 @@ function love.load(arg)
     bgmTitle:setLooping(true)
     bgmTitle:play()
 
-
     -- low hp warning sound
     warningSound = love.audio.newSource("assets/sfx/warning.wav", "static")
+    -- gamestart sounds
+    startsounds[1] = love.audio.newSource("assets/sfx/letsgo.wav","static")
+    startsounds[2] = love.audio.newSource("assets/sfx/goodluck.wav", "static")
+    startsounds[3] = love.audio.newSource("assets/sfx/bingo.wav", "static")
     -- load explosions
     explosions[1] = love.audio.newSource("assets/sfx/explod1.wav", "static")
     explosions[2] = love.audio.newSource("assets/sfx/explod2.wav", "static")
@@ -385,6 +388,11 @@ function love.load(arg)
         bgmTitle:stop()
         bgm:setVolume(1)
 
+        local startSound = getRandSound(startsounds[0], startsounds)
+        startsounds[startSound]:stop()
+        startsounds[startSound]:play()
+        startsounds[0] = startSound
+
         -- start position, middle of screen at bottom
         player.pos.x = START_POS.x; player.pos.y = START_POS.y - 8
 
@@ -442,7 +450,7 @@ function love.load(arg)
 
         -- game bounds / lateral
         if player.pos.x < 8 then player._v.x = 0; player.pos.x = 8 end
-        if player.pos.x > love.graphics.getWidth()/(1*SCALE_FACTOR) - 24 then player.pos.x = love.graphics.getWidth()/(1*SCALE_FACTOR) - 24; player._v.x = 0; end
+        if player.pos.x > love.graphics.getWidth()/(1*SCALE_FACTOR) - (66/SCALE_FACTOR) then player.pos.x = love.graphics.getWidth()/(1*SCALE_FACTOR) - (66/SCALE_FACTOR); player._v.x = 0; end
         -- game bounds / vertical
         if player.pos.y < 24 then player._v.y = 0; player.pos.y = 24 end
         if player.pos.y > love.graphics.getHeight()/(1*SCALE_FACTOR) - 8 then player.pos.y = love.graphics.getHeight()/(1*SCALE_FACTOR) - 8; player._v.y = 0; end
@@ -557,9 +565,9 @@ function love.load(arg)
 
           -- blow him up
           shakeScreen(0.35,4)
-          addFx(enemy.x,enemy.y,"flash")
           addFx(enemy.x,enemy.y,"blast")
           addFx(enemy.x,enemy.y,"explodepuff", 25, 50)
+          addFx(enemy.x,enemy.y,"flash")
           addDebris(enemy.x,enemy.y,10,20,true)
 
           local randSound = getRandSound(explosions[0],explosions)
@@ -642,9 +650,9 @@ function love.load(arg)
           shakeScreen(2, 4)
           addDebris(player.pos.x,player.pos.y, 50,75)
 
-          addFx(player.pos.x,player.pos.y,"flash")
           addFx(player.pos.x,player.pos.y,"blast")
           addFx(player.pos.x,player.pos.y,"explodepuff",50,100)
+          addFx(player.pos.x,player.pos.y,"flash")
 
           local deathSound = getRandSound(playerdeath[0], playerdeath)
           playerdeath[deathSound]:play()
@@ -668,6 +676,7 @@ function love.load(arg)
           enemies = {}
           drops = {}
           debris = {}
+          fx = {}
           -- reset timers
           shootTimer = shootDelay
           enemySpawnDelay = enemySpawnDelayMax
@@ -683,10 +692,14 @@ function love.load(arg)
           bgm:stop()
           bgm:setPitch(1)
           bgm:play()
+          -- LETS GO / GOOD LUCK
+          local startSound = getRandSound(startsounds[0], startsounds)
+          startsounds[startSound]:stop()
+          startsounds[startSound]:play()
+          startsounds[0] = startSound
           -- uhhhh
           deathPitch = 1
           globalTimeScale = 1
-          playerJustDied = false
           -- reset gunpower and score
           gunPower = 1
           totalScore = 0
