@@ -78,13 +78,16 @@ function addDrop()
   if newDrop.rot_dir == 0 then newDrop.rot_dir = 1 end
   local dropChance = love.math.random(1,100)
 
-  if love.math.random(1,100) >= 50 then   -- 50% chance for drops to occur
-    if dropChance <= 50 then
+  if love.math.random(1,100) <= 75 then
+    if dropChance <= 25/gunPower then
       newDrop.img = batteryImg
       newDrop.type = "battery"
     elseif dropChance <= 85 then
       newDrop.img = wrenchImg
       newDrop.type = "repair"
+    elseif dropChance <= 95 then
+      newDrop.img = bombImg
+      newDrop.type = "bomb"
     else
       newDrop.img = gunImg
       newDrop.type = "gun"
@@ -167,7 +170,7 @@ enemySpawnDelay = enemySpawnDelayMax
 enemySpawnTimer = enemySpawnDelay
 enemySpawnIncreaseAmount = 0.0015
 -- drop spawn timer
-dropSpawnDelay = 2.50
+dropSpawnDelay = 5.50
 dropSpawnTimer = dropSpawnDelay
 -- global timer
 globalTime = 0
@@ -232,6 +235,7 @@ totalScore = 0
 playerShotSound = nil
 pickedUpPower = false
 canPlayWarning = true
+canScreenBombExplode = true
 
 -- gun power vars
 gunPower = 1.00 -- percent of gun power left, 0 - 1
@@ -252,7 +256,7 @@ function love.load(arg)
   love.audio.setVolume(0.65)
   love.graphics.setDefaultFilter("nearest", "nearest" )
   love.math.setRandomSeed(os.time())
-  control = {left = 'a', right = 'd', up = 'w', down = 's', shoot = 'k', restart = 'j'}
+  control = {left = 'a', right = 'd', up = 'w', down = 's', shoot = 'k', restart = 'j', bomb = 'l'}
 
   -- load images
   bumblerImg = love.graphics.newImage('assets/bumbler_sheet.png')
@@ -369,7 +373,7 @@ function love.load(arg)
     upheavalFont = love.graphics.newFont("assets/upheaval.ttf", 18)
 
     -- make player
-    player = { pos = {x = 0, y = 0}, _v = {x = 0, y = 0}, accel = 35, termVel = 200, maxhp = 10, hp = 0, pwr = 1, alive = true, frame = 1, sheet = bumblerFrames, img = bumblerImg, smoketimer = 0}
+    player = { pos = {x = 0, y = 0}, _v = {x = 0, y = 0}, accel = 35, termVel = 200, maxhp = 10, hp = 0, bombs = 3, pwr = 1, alive = true, frame = 1, sheet = bumblerFrames, img = bumblerImg, smoketimer = 0}
     player.hp = player.maxhp
 
     -- fieri on canvas
@@ -405,7 +409,7 @@ function love.load(arg)
 
       end
     elseif gameRunning then
-      if player.alive then
+      if player.alive and bgm:getPitch() > 0.05 then
         bgm:setPitch(math.normalize(0.4 * gunPower,.1))
       end
 
@@ -415,19 +419,30 @@ function love.load(arg)
         end
 
         -- SCREEN CLEARING BOMBS
-        if love.keyboard.isDown('l') then
-          local bombSound = getRandSound(bombexplode[0], bombexplode)
-          bombexplode[bombSound]:stop()
-          bombexplode[bombSound]:play()
-          bombexplode[0] = bombSound
-          for i, enemy in ipairs(enemies) do
-            enemy.hp = 0
+        if love.keyboard.isDown(control.bomb) then
+          if canScreenBombExplode and gunPower > 0.25 then
+
+            -- gunPower = gunPower - 0.25
+
+            local bombSound = getRandSound(bombexplode[0], bombexplode)
+            bombexplode[bombSound]:stop()
+            bombexplode[bombSound]:play()
+            bombexplode[0] = bombSound
+
+            for i, enemy in ipairs(enemies) do
+              enemy.hp = 0
+            end
+
+            for i, bullet in ipairs(enemy_bullets) do
+              addFx(bullet.pos.x, bullet.pos.y, "dangerpuff")
+              enemy_bullets[i] = nil
+              addToScore(1)
+            end
+            enemy_bullets = {}
+            canScreenBombExplode = false
           end
-          for i, bullet in ipairs(enemy_bullets) do
-            addFx(bullet.pos.x, bullet.pos.y, "dangerpuff")
-            addToScore(1)
-            table.remove(enemy_bullets,i)
-          end
+        else
+          canScreenBombExplode = true
         end
       end
 
@@ -518,7 +533,9 @@ function love.load(arg)
             newBullet.rot = math.atan(x, y)
             table.insert(bullets, newBullet)
             -- diminish gunpower for every shot fired
-            gunPower = gunPower - (gunPowerLose * dt)
+            if gunPower > 0.01 then
+              gunPower = gunPower - (gunPowerLose * dt)
+            end
           end
           local playerShotSound = getRandSound(playershots[0], playershots)
           playershots[playerShotSound]:stop()
@@ -538,7 +555,7 @@ function love.load(arg)
 
       -- ### PLAYER BULLET PHYSICS ###
       for i, bullet in ipairs(bullets) do
-        bullet._v.y = bullet._v.y +  bullet.aero
+        bullet._v.y = bullet._v.y + bullet.aero
         -- air resistance / lateral
         if bullet._v.x > 0 then
           bullet._v.x = bullet._v.x - bullet.aero
@@ -587,7 +604,7 @@ function love.load(arg)
           addToScore(10)
 
           -- blow him up
-          shakeScreen(0.35,4)
+          shakeScreen(0.25,2)
           addFx(enemy.x,enemy.y,"blast")
           addFx(enemy.x,enemy.y,"explodepuff", 25, 50)
           addFx(enemy.x,enemy.y,"flash")
@@ -711,6 +728,8 @@ function love.load(arg)
           player.alive = true
           player.hp = player.maxhp
           player.pwr = 1
+          player.bombs = 3
+          player.smoketimer = 0
           -- restart bgm
           bgm:stop()
           bgm:setPitch(1)
@@ -775,7 +794,7 @@ function love.load(arg)
           if checkCollision(enemy.x - enemy.img:getWidth()/2, enemy.y - enemy.img:getHeight()/2, enemy.img:getWidth(), enemy.img:getHeight()/2, bullet.pos.x - bullet.img:getWidth()/2, bullet.pos.y - bullet.img:getHeight()/2, bullet.img:getWidth(), bullet.img:getHeight()) then
             table.remove(bullets,j)
             enemy.hp = enemy.hp - 1
-            shakeScreen(.05,.75)
+            shakeScreen(.05,.5)
             addDebris(bullet.pos.x,bullet.pos.y,1,4,true)
             addFx(enemy.x,enemy.y,"dangerpuff")
 
@@ -798,7 +817,7 @@ function love.load(arg)
           player.hp = player.hp - 1
           addDebris(bullet.pos.x,bullet.pos.y,1,4)
           addFx(bullet.pos.x,bullet.pos.y,"dangerpuff")
-          shakeScreen(.35,2)
+          shakeScreen(.35,1.2)
 
           local hurtSound = getRandSound(playerhurt[0], playerhurt)
           playerhurt[hurtSound]:stop()
@@ -1020,5 +1039,6 @@ function love.load(arg)
       love.graphics.print("next drop in "..dropSpawnTimer, 0, 122)
       love.graphics.print("bgmpitch "..bgm:getPitch(), 0, 134)
       love.graphics.print("timescale "..globalTimeScale, 0, 146)
+      love.graphics.print("battery drop chance "..25/gunPower, 0, 158)
     end
   end
